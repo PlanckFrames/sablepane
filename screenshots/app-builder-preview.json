@@ -1,0 +1,36 @@
+{
+  "url": "http://127.0.0.1:8080/",
+  "viewports": {
+    "desktop": {
+      "width": 1280,
+      "height": 800,
+      "status": 200,
+      "title": "Sablepane",
+      "hasCanvas": false,
+      "bodyTextLen": 2310,
+      "bodyTextHash": "d6bf6b45d5244d0fc00524046ea5b3ebb4345ee7c0162da7075979c519346e90",
+      "bodyTextPrefix": "Sablepane VISUAL ANALYTICS Data Sources Visualize Board Pulse As",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/workspace/screenshots/app-builder-preview.png"
+    },
+    "mobile": {
+      "width": 390,
+      "height": 844,
+      "status": 200,
+      "title": "Sablepane",
+      "hasCanvas": false,
+      "bodyTextLen": 714,
+      "bodyTextHash": "ac6a860cf70f0607e6da6372981067b280b65cca2e5f1a799321c53f3ba1ce8a",
+      "bodyTextPrefix": "Sablepane VISUAL ANALYTICS Sign in CSV PDF JPG PNG FIELDS Auto l",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/workspace/screenshots/app-builder-preview-mobile.png"
+    }
+  },
+  "brandWarnings": [],
+  "authWarnings": [],
+  "verdictFile": "/workspace/screenshots/app-builder-preview.json"
+}
