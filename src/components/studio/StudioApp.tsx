@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState, type DragEvent, type ReactNode } from "react";
 import {
   BarChart3,
+  ChevronDown,
+  ChevronRight,
   Database,
   Download,
   LayoutGrid,
@@ -297,21 +299,32 @@ function DataTab() {
 
 function SetSummary({ ds }: { ds: Dataset }) {
   const items = useMemo(() => pulse(ds), [ds]);
+  const [open, setOpen] = useState(true);
   return (
     <div className="mt-1 rounded-md border border-border bg-panel px-2.5 py-2">
-      <div className="text-[10px] font-semibold uppercase tracking-wide text-muted">Summary</div>
-      {items.length === 0 ? (
-        <p className="mt-1 text-[11px] text-muted">No numeric measures to summarize.</p>
-      ) : (
-        <ul className="mt-1.5 space-y-1.5">
-          {items.map((it) => (
-            <li key={it.id}>
-              <div className="text-[11px] font-semibold leading-tight">{it.title}</div>
-              <p className="text-[11px] leading-snug text-muted">{it.body}</p>
-            </li>
-          ))}
-        </ul>
-      )}
+      <button
+        type="button"
+        className="flex w-full items-center gap-1 text-left"
+        aria-expanded={open}
+        onClick={() => setOpen((v) => !v)}
+      >
+        {open ? <ChevronDown className="size-3.5 shrink-0 text-muted" /> : <ChevronRight className="size-3.5 shrink-0 text-muted" />}
+        <span className="text-[10px] font-semibold uppercase tracking-wide text-muted">Summary</span>
+      </button>
+      {open ? (
+        items.length === 0 ? (
+          <p className="mt-1 text-[11px] text-muted">No numeric measures to summarize.</p>
+        ) : (
+          <ul className="mt-1.5 space-y-1.5">
+            {items.map((it) => (
+              <li key={it.id}>
+                <div className="text-[11px] font-semibold leading-tight">{it.title}</div>
+                <p className="text-[11px] leading-snug text-muted">{it.body}</p>
+              </li>
+            ))}
+          </ul>
+        )
+      ) : null}
     </div>
   );
 }

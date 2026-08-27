@@ -6,6 +6,7 @@ import { mergeChartStyle, parseHex, seriesPaint } from "@/lib/bi/chart-style";
 import type { QueryResult } from "@/lib/bi/engine";
 import { useStudio } from "@/store/studio";
 import { cn } from "@/lib/utils";
+import { ColorSwatch } from "./ColorPicker";
 
 export function FormatPanel({ viz, result }: { viz: Viz; result: QueryResult }) {
   const patchStyle = useStudio((s) => s.patchStyle);
@@ -502,8 +503,6 @@ function TextEditor({ label, value, onChange }: { label: string; value: TextStyl
           value={value.size}
           onChange={(e) => set({ size: Number(e.target.value) || 12 })}
         />
-        <input type="color" className="size-8 cursor-pointer rounded-sm border border-border" value={toHex(value.color)} onChange={(e) => set({ color: e.target.value })} />
-        <HexField value={value.color} onChange={(c) => set({ color: c })} />
         <StyleBtn active={value.bold} onClick={() => set({ bold: !value.bold })}>
           B
         </StyleBtn>
@@ -513,6 +512,9 @@ function TextEditor({ label, value, onChange }: { label: string; value: TextStyl
         <StyleBtn active={value.underline} onClick={() => set({ underline: !value.underline })}>
           <span className="underline">U</span>
         </StyleBtn>
+      </div>
+      <div className="mt-1.5">
+        <ColorSwatch label="Font color" value={value.color} onChange={(c) => set({ color: c })} />
       </div>
     </div>
   );

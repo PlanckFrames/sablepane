@@ -84,7 +84,7 @@ export const useStudio = create<Studio>()(
       ...seed(),
       hydrated: false,
       setHydrated: (v) => set({ hydrated: v }),
-      setTab: (tab) => set({ tab: tab === "pulse" ? "data" : tab }),
+      setTab: (tab) => set({ tab: (tab as string) === "pdf" || tab === "pulse" ? "data" : tab }),
       setName: (name) => set({ name }),
       setTheme: (theme) => set({ theme }),
       setActiveDataset: (id) => set({ activeDatasetId: id }),
@@ -186,7 +186,12 @@ export const useStudio = create<Studio>()(
       skipHydration: true,
       merge: (persisted, current) => {
         const p = (persisted ?? {}) as Partial<Project>;
-        return { ...current, ...p, theme: p.theme ?? "light", tab: p.tab === "pulse" ? "data" : (p.tab ?? current.tab) };
+        return {
+          ...current,
+          ...p,
+          theme: p.theme ?? "light",
+          tab: p.tab === "pulse" || (p.tab as string) === "pdf" ? "data" : (p.tab ?? current.tab),
+        };
       },
       partialize: (s) => ({
         name: s.name,
