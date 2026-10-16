@@ -557,7 +557,7 @@ function VizTab() {
         </div>
         <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
           <div className="sable-chart min-h-0 flex-1 p-2">
-            <div className="h-full overflow-hidden rounded-lg border border-border">
+            <div className="h-full min-h-0 overflow-auto rounded-lg border border-border">
               <ChartView viz={viz} result={result} />
             </div>
           </div>

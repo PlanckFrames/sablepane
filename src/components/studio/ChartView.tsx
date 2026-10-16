@@ -262,6 +262,161 @@ function axes(
   ];
 }
 
+function axisScale(values: number[], style: ChartStyle) {
+  const parsedMin = style.y.min.trim() === "" ? undefined : Number(style.y.min);
+  const parsedMax = style.y.max.trim() === "" ? undefined : Number(style.y.max);
+  let lo = Math.min(0, ...values, 0);
+  let hi = Math.max(...values, 1);
+  if (!(hi > lo)) hi = lo + 1;
+  if (parsedMin != null && Number.isFinite(parsedMin)) lo = parsedMin;
+  if (parsedMax != null && Number.isFinite(parsedMax)) hi = parsedMax;
+  if (!(hi > lo)) hi = lo + 1;
+  const rough = (hi - lo) / 4;
+  const mag = 10 ** Math.floor(Math.log10(Math.max(rough, 1e-9)));
+  const err = rough / mag;
+  const step = err < 1.5 ? mag : err < 3 ? 2 * mag : err < 7 ? 5 * mag : 10 * mag;
+  const safe = step || 1;
+  const start = parsedMin != null && Number.isFinite(parsedMin) ? lo : Math.floor(lo / safe) * safe;
+  const end = parsedMax != null && Number.isFinite(parsedMax) ? hi : Math.ceil(hi / safe) * safe;
+  const ticks: number[] = [];
+  for (let v = start, n = 0; v <= end + safe * 0.01 && n < 12; v += safe, n++) ticks.push(Math.round(v * 1e6) / 1e6);
+  if (ticks.length < 2) return { min: lo, max: hi, ticks: [lo, hi] };
+  return { min: ticks[0], max: ticks[ticks.length - 1], ticks };
+}
+
+function CategoryFrame({
+  style,
+  xLabels,
+  scale,
+  topPad,
+  yFmt,
+  children,
+}: {
+  style: ChartStyle;
+  xLabels: string[];
+  scale: { min: number; max: number; ticks: number[] };
+  topPad: number;
+  yFmt: (n: number) => string;
+  children: ReactElement;
+}) {
+  const span = scale.max - scale.min || 1;
+  const yPct = (v: number) => ((scale.max - v) / span) * 100;
+  const yCss = textCss(style.y.labelStyle);
+  const xCss = textCss(style.x.labelStyle);
+  const yRot = rotateCss(style.y.tickRotate, style.y.tickFlip);
+  const xRot = rotateCss(style.x.tickRotate, style.x.tickFlip);
+  const yWidth = style.y.showLabels
+    ? axisBand(
+        Math.max(4, ...scale.ticks.map((t) => yFmt(t).length)),
+        style.y.labelStyle.size,
+        style.y.tickRotate,
+        style.y.tickFlip,
+        "y",
+      )
+    : 8;
+  const xHeight = style.x.showLabels
+    ? axisBand(Math.max(4, ...xLabels.map((x) => x.length), 4), style.x.labelStyle.size, style.x.tickRotate, style.x.tickFlip, "x")
+    : 0;
+  const yTop = (v: number) => `calc(${topPad}px + (100% - ${topPad}px) * ${yPct(v) / 100})`;
+  const n = Math.max(1, xLabels.length);
+  return (
+    <div className="flex h-full min-h-0 flex-col">
+      <div className="flex min-h-0 min-w-0 flex-1">
+        <div className="relative shrink-0" style={{ width: yWidth }}>
+          {style.y.showLabels
+            ? scale.ticks.map((v) => (
+                <span
+                  key={v}
+                  className="absolute right-2 leading-none"
+                  style={{ top: yTop(v), transform: "translateY(-50%)", ...yCss, ...yRot }}
+                >
+                  {yFmt(v)}
+                </span>
+              ))
+            : null}
+        </div>
+        <div className="relative min-h-0 min-w-0 flex-1">
+          <div className="pointer-events-none absolute right-0 left-0" style={{ top: topPad, bottom: 0 }}>
+            {style.grid
+              ? scale.ticks.map((v) => (
+                  <div key={`gh-${v}`} className="absolute right-0 left-0" style={{ top: `${yPct(v)}%`, borderTop: `1px solid ${style.gridColor}` }} />
+                ))
+              : null}
+            {style.grid
+              ? xLabels.map((_, i) => (
+                  <div key={`gv-${i}`} className="absolute top-0 bottom-0" style={{ left: `${(i / n) * 100}%`, borderLeft: `1px solid ${style.gridColor}` }} />
+                ))
+              : null}
+            {style.y.lineWidth > 0 ? (
+              <div className="absolute top-0 bottom-0 left-0" style={{ width: Math.max(1, style.y.lineWidth), background: style.y.lineColor }} />
+            ) : null}
+            {style.x.lineWidth > 0 ? (
+              <div className="absolute right-0 bottom-0 left-0" style={{ height: Math.max(1, style.x.lineWidth), background: style.x.lineColor }} />
+            ) : null}
+            {style.y.showLabels && style.y.lineWidth > 0
+              ? scale.ticks.map((v) => (
+                  <div key={`yt-${v}`} className="absolute left-0" style={{ top: `${yPct(v)}%`, width: 6, height: 1, background: style.y.lineColor }} />
+                ))
+              : null}
+            {style.x.showLabels && style.x.lineWidth > 0
+              ? xLabels.map((_, i) => (
+                  <div
+                    key={`xt-${i}`}
+                    className="absolute bottom-0"
+                    style={{ left: `${((i + 0.5) / n) * 100}%`, width: 1, height: 6, background: style.x.lineColor }}
+                  />
+                ))
+              : null}
+          </div>
+          <div className="absolute right-0 bottom-0 left-0" style={{ top: topPad }}>
+            <ResponsiveContainer width="100%" height="100%">{children}</ResponsiveContainer>
+          </div>
+        </div>
+      </div>
+      {style.x.showLabels ? (
+        <div className="flex shrink-0" style={{ height: Math.max(xHeight, 22) }}>
+          <div className="shrink-0" style={{ width: yWidth }} />
+          <div className="relative min-w-0 flex-1">
+            {xLabels.map((lab, i) => (
+              <span
+                key={`${lab}-${i}`}
+                className="absolute leading-none"
+                style={{
+                  left: `${((i + 0.5) / n) * 100}%`,
+                  top: 6,
+                  transform: "translateX(-50%)",
+                  maxWidth: `${Math.max(12, 100 / n)}%`,
+                  ...xCss,
+                  ...xRot,
+                }}
+              >
+                {lab}
+              </span>
+            ))}
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function scaleAxes(scale: { min: number; max: number }, style: ChartStyle): ReactElement[] {
+  return [
+    <XAxis key="x" dataKey="x" height={0} tick={false} axisLine={false} tickLine={false} />,
+    <YAxis key="y" width={0} tick={false} axisLine={false} tickLine={false} domain={[scale.min, scale.max]} />,
+    <Tooltip
+      key="tt"
+      contentStyle={{
+        background: style.plotFill,
+        border: "1px solid #cfc9bc",
+        borderRadius: 8,
+        color: style.x.labelStyle.color,
+        fontSize: 12,
+      }}
+    />,
+  ];
+}
+
 function HtmlLegend({ style, items }: { style: ChartStyle; items: LegendItem[] }) {
   if (!style.legend.show || items.length === 0) return null;
   const pos = style.legend.position;
@@ -338,6 +493,7 @@ function ChartShell({
   chartKey,
   className,
   html,
+  bare,
   children,
 }: {
   viz: Viz;
@@ -348,6 +504,7 @@ function ChartShell({
   chartKey: string;
   className?: string;
   html?: boolean;
+  bare?: boolean;
   children: ReactElement;
 }) {
   const legend = <HtmlLegend style={style} items={legendItems} />;
@@ -369,8 +526,8 @@ function ChartShell({
     </div>
   ) : null;
 
-  const plotBody = html ? (
-    <div className="min-h-0 min-w-0 flex-1 overflow-auto">{children}</div>
+  const plotBody = html || bare ? (
+    <div className="min-h-0 min-w-0 flex-1 overflow-visible">{children}</div>
   ) : (
     <div className="min-h-0 min-w-0 flex-1">
       <ResponsiveContainer key={chartKey} width="100%" height="100%">
@@ -490,6 +647,20 @@ export function ChartView({
     left: 6,
     bottom: 4,
   };
+  const seriesValues: number[] = [];
+  for (const row of data) {
+    if (stacked) {
+      let sum = 0;
+      for (const k of keys) sum += Number(row[k] ?? 0);
+      seriesValues.push(sum);
+    } else {
+      for (const k of keys) {
+        seriesValues.push(Number(row[k] ?? 0));
+        if (row[`${k}__2`] != null) seriesValues.push(Number(row[`${k}__2`]));
+      }
+    }
+  }
+  const topPad = chartMargin.top;
   const chartKey = JSON.stringify(style);
   const pieLike = viz.chart === "pie" || viz.chart === "donut" || viz.chart === "treemap";
   const legendItems: LegendItem[] = pieLike
@@ -511,6 +682,17 @@ export function ChartView({
       {chart}
     </ChartShell>
   );
+
+  const framed = (labels: string[], yValues: number[], chart: (sc: { min: number; max: number; ticks: number[] }) => ReactElement) => {
+    const sc = axisScale(yValues.length ? yValues : [0, 1], style);
+    return (
+      <ChartShell viz={viz} style={style} xTitle={xTitle} yTitle={yTitle} legendItems={legendItems} chartKey={chartKey} className={className} bare>
+        <CategoryFrame style={style} xLabels={labels} scale={sc} topPad={topPad} yFmt={yFmt}>
+          {chart(sc)}
+        </CategoryFrame>
+      </ChartShell>
+    );
+  };
 
   if (viz.chart === "kpi") {
     return (
@@ -626,10 +808,12 @@ export function ChartView({
       };
     });
     const paint = seriesPaint(style, "n", 0);
-    return shell(
-      <BarChart data={hist} barCategoryGap={`${style.bars.categoryGap}%`} margin={chartMargin}>
+    const labels = hist.map((h) => h.x);
+    const counts = hist.map((h) => h.n);
+    return framed(labels, counts, (sc) => (
+      <BarChart data={hist} barCategoryGap={`${style.bars.categoryGap}%`} margin={{ top: 0, right: 8, left: 0, bottom: 0 }}>
         {[
-          ...axes(style, { yTick: (n) => String(n), ...axisOpts }),
+          ...scaleAxes(sc, style),
           <Bar
             key="n"
             dataKey="n"
@@ -642,8 +826,8 @@ export function ChartView({
             label={makeBarLabel(style)}
           />,
         ]}
-      </BarChart>,
-    );
+      </BarChart>
+    ));
   }
 
   if (viz.chart === "pie" || viz.chart === "donut") {
@@ -724,10 +908,10 @@ export function ChartView({
   }
 
   if (viz.chart === "line") {
-    return shell(
-      <LineChart data={data} margin={chartMargin}>
+    return framed(xSet, seriesValues, (sc) => (
+      <LineChart data={data} margin={{ top: 0, right: 8, left: 0, bottom: 0 }}>
         {[
-          ...axes(style, axisOpts),
+          ...scaleAxes(sc, style),
           ...keys.map((k, i) => {
             const paint = seriesPaint(style, k, i);
             return (
@@ -746,15 +930,15 @@ export function ChartView({
             );
           }),
         ]}
-      </LineChart>,
-    );
+      </LineChart>
+    ));
   }
 
   if (viz.chart === "area") {
-    return shell(
-      <AreaChart data={data} margin={chartMargin}>
+    return framed(xSet, seriesValues, (sc) => (
+      <AreaChart data={data} margin={{ top: 0, right: 8, left: 0, bottom: 0 }}>
         {[
-          ...axes(style, axisOpts),
+          ...scaleAxes(sc, style),
           ...keys.map((k, i) => {
             const paint = seriesPaint(style, k, i);
             return (
@@ -774,17 +958,17 @@ export function ChartView({
             );
           }),
         ]}
-      </AreaChart>,
-    );
+      </AreaChart>
+    ));
   }
 
   if (viz.chart === "combo") {
     const paint0 = seriesPaint(style, keys[0] ?? "Value", 0);
     const paint1 = seriesPaint(style, keys[0] ? `${keys[0]}__2` : "Value2", 1);
-    return shell(
-      <ComposedChart data={data} barCategoryGap={`${style.bars.categoryGap}%`} barGap={style.bars.barGap} margin={chartMargin}>
+    return framed(xSet, seriesValues, (sc) => (
+      <ComposedChart data={data} barCategoryGap={`${style.bars.categoryGap}%`} barGap={style.bars.barGap} margin={{ top: 0, right: 8, left: 0, bottom: 0 }}>
         {[
-          ...axes(style, axisOpts),
+          ...scaleAxes(sc, style),
           keys[0] ? (
             <Bar
               key="bar"
@@ -815,14 +999,14 @@ export function ChartView({
             <g key="no-line" />
           ),
         ]}
-      </ComposedChart>,
-    );
+      </ComposedChart>
+    ));
   }
 
-  return shell(
-    <BarChart data={data} barCategoryGap={`${style.bars.categoryGap}%`} barGap={style.bars.barGap} margin={chartMargin}>
+  return framed(xSet, seriesValues, (sc) => (
+    <BarChart data={data} barCategoryGap={`${style.bars.categoryGap}%`} barGap={style.bars.barGap} margin={{ top: 0, right: 8, left: 0, bottom: 0 }}>
       {[
-        ...axes(style, axisOpts),
+        ...scaleAxes(sc, style),
         ...keys.map((k, i) => {
           const paint = seriesPaint(style, k, i);
           return (
@@ -841,8 +1025,8 @@ export function ChartView({
           );
         }),
       ]}
-    </BarChart>,
-  );
+    </BarChart>
+  ));
 }
 
 function TreemapCell({
